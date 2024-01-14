@@ -5,6 +5,7 @@ from random import randint
 from datetime import datetime
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
@@ -13,7 +14,7 @@ from selenium.common.exceptions import ElementClickInterceptedException, StaleEl
 from srt_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
 from srt_reservation.validation import station_list
 
-chromedriver_path = r'C:\workspace\chromedriver.exe'
+from srt_reservation.discord import send_message
 
 class SRT:
     def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False):
@@ -60,9 +61,9 @@ class SRT:
 
     def run_driver(self):
         try:
-            self.driver = webdriver.Chrome(executable_path=chromedriver_path)
+            self.driver = webdriver.Chrome()
         except WebDriverException:
-            self.driver = webdriver.Chrome(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service= Service(ChromeDriverManager().install()))
 
     def login(self):
         self.driver.get('https://etk.srail.co.kr/cmc/01/selectLoginForm.do')
@@ -117,6 +118,15 @@ class SRT:
         # standard_seat는 일반석 검색 결과 텍스트
         
         if "예약하기" in standard_seat:
+            info_a = self.driver.find_element(By.CSS_SELECTOR,
+                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(3)").text.replace("\n", " ")
+            info_b = self.driver.find_element(By.CSS_SELECTOR,
+                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(4)").text.replace("\n", " ")
+            info_c = self.driver.find_element(By.CSS_SELECTOR,
+                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(5)").text.replace("\n", " ")
+            print(info_a)
+            print(info_b)
+            print(info_c)
             print("예약 가능 클릭")
 
             # Error handling in case that click does not work
@@ -135,6 +145,8 @@ class SRT:
             if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
                 self.is_booked = True
                 print("예약 성공")
+                standard_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
+                send_message("예약 성공")
                 return self.driver
             else:
                 print("잔여석 없음. 다시 검색")
@@ -146,12 +158,15 @@ class SRT:
         self.driver.execute_script("arguments[0].click();", submit)
         self.cnt_refresh += 1
         print(f"새로고침 {self.cnt_refresh}회")
+        if self.cnt_refresh % 100 == 0:
+            send_message(f"새로고침 {self.cnt_refresh}회")
         self.driver.implicitly_wait(10)
         time.sleep(0.5)
 
     def reserve_ticket(self, reservation, i):
         if "신청하기" in reservation:
             print("예약 대기 완료")
+            send_message("예약 대기 완료")
             self.driver.find_element(By.CSS_SELECTOR,
                                      f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
             self.is_booked = True
@@ -181,11 +196,31 @@ class SRT:
                 self.refresh_result()
 
     def run(self, login_id, login_psw):
+        self.printInfo()
         self.run_driver()
         self.set_log_info(login_id, login_psw)
         self.login()
         self.go_search()
         self.check_result()
+
+    def printInfo(self):
+        print("====INFO====")
+        print(f"출발역: {self.dpt_stn}")
+        print(f"도착역: {self.arr_stn}")
+        print(f"출발 일자: {self.dpt_dt}")
+        print(f"출발 시간: {self.dpt_tm}")
+
+        print(f"체크할 열차 수: {self.num_trains_to_check}")
+        print(f"예약 대기 여부: {self.want_reserve}")
+
+        send_message("====INFO====")
+        send_message(f"출발역: {self.dpt_stn}")
+        send_message(f"도착역: {self.arr_stn}")
+        send_message(f"출발 일자: {self.dpt_dt}")
+        send_message(f"출발 시간: {self.dpt_tm}")
+
+        send_message(f"체크할 열차 수: {self.num_trains_to_check}")
+        send_message(f"예약 대기 여부: {self.want_reserve}")
 
 #
 # if __name__ == "__main__":
