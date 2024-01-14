@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import time
+import requests
 from random import randint
 from datetime import datetime
 from selenium import webdriver
@@ -11,13 +12,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException
 
-from srt_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
-from srt_reservation.validation import station_list
-
-from srt_reservation.discord import send_message
+from exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
+from validation import station_list
 
 class SRT:
-    def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False):
+    def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False, webhook_url=""):
         """
         :param dpt_stn: SRT 출발역
         :param arr_stn: SRT 도착역
@@ -41,7 +40,16 @@ class SRT:
         self.is_booked = False  # 예약 완료 되었는지 확인용
         self.cnt_refresh = 0  # 새로고침 회수 기록
 
+        self.webhook_url = webhook_url
+
         self.check_input()
+
+    def send_message(self, msg):
+        """디스코드 메세지 전송"""
+        now = datetime.now()
+        message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
+        requests.post(self.webhook_url, data=message)
+        print(message)
 
     def check_input(self):
         if self.dpt_stn not in station_list:
@@ -146,7 +154,7 @@ class SRT:
                 self.is_booked = True
                 print("예약 성공")
                 standard_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
-                send_message("예약 성공")
+                self.send_message("예약 성공")
                 return self.driver
             else:
                 print("잔여석 없음. 다시 검색")
@@ -159,14 +167,14 @@ class SRT:
         self.cnt_refresh += 1
         print(f"새로고침 {self.cnt_refresh}회")
         if self.cnt_refresh % 100 == 0:
-            send_message(f"새로고침 {self.cnt_refresh}회")
+            self.send_message(f"새로고침 {self.cnt_refresh}회")
         self.driver.implicitly_wait(10)
         time.sleep(0.5)
 
     def reserve_ticket(self, reservation, i):
         if "신청하기" in reservation:
             print("예약 대기 완료")
-            send_message("예약 대기 완료")
+            self.send_message("예약 대기 완료")
             self.driver.find_element(By.CSS_SELECTOR,
                                      f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
             self.is_booked = True
@@ -213,14 +221,14 @@ class SRT:
         print(f"체크할 열차 수: {self.num_trains_to_check}")
         print(f"예약 대기 여부: {self.want_reserve}")
 
-        send_message("====INFO====")
-        send_message(f"출발역: {self.dpt_stn}")
-        send_message(f"도착역: {self.arr_stn}")
-        send_message(f"출발 일자: {self.dpt_dt}")
-        send_message(f"출발 시간: {self.dpt_tm}")
+        self.send_message("====INFO====")
+        self.send_message(f"출발역: {self.dpt_stn}")
+        self.send_message(f"도착역: {self.arr_stn}")
+        self.send_message(f"출발 일자: {self.dpt_dt}")
+        self.send_message(f"출발 시간: {self.dpt_tm}")
 
-        send_message(f"체크할 열차 수: {self.num_trains_to_check}")
-        send_message(f"예약 대기 여부: {self.want_reserve}")
+        self.send_message(f"체크할 열차 수: {self.num_trains_to_check}")
+        self.send_message(f"예약 대기 여부: {self.want_reserve}")
 
 #
 # if __name__ == "__main__":
@@ -229,4 +237,3 @@ class SRT:
 #
 #     srt = SRT("동탄", "동대구", "20220917", "08")
 #     srt.run(srt_id, srt_psw)
-

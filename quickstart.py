@@ -29,6 +29,8 @@ if __name__ == "__main__":
         num_trains_to_check = _cfg['TRAIN_NUMBER']
         want_reserve = _cfg['IS_RESERVE']
 
+        webhook_url = _cfg['DISCORD_WEBHOOK_URL']
+
     if cli_args.user:
         login_id = cli_args.user
     if cli_args.psw:
@@ -47,5 +49,5 @@ if __name__ == "__main__":
     if cli_args.reserve:
         want_reserve = cli_args.reserve
 
-    srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve)
+    srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve, webhook_url=webhook_url)
     srt.run(login_id, login_psw)
