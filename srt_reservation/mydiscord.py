@@ -137,7 +137,8 @@ async def on_message(message):
                 if message.content == station:
                     dpt_stn = station
                     print(f"🚉출발역 입력 완료 {dpt_stn}역")
-                    await message.channel.send(f"🚉출발역 입력 완료 {dpt_stn}역")
+                    await message.channel.send(f"🚉출발역 입력 완료")
+                    await message.channel.send(f"'{dpt_stn}역'")
 
                     print("🚉도착역을 입력하세요")
                     print("현재 가능한 역👇")
@@ -152,7 +153,8 @@ async def on_message(message):
                 if message.content == station:
                     arr_stn = station
                     print(f"🚉도착역 입력 완료 {arr_stn}역")
-                    await message.channel.send(f"🚉도착역 입력 완료 {arr_stn}역")
+                    await message.channel.send(f"🚉도착역 입력 완료")
+                    await message.channel.send(f"'{arr_stn}역'")
 
                     print("📆조회할 날짜를 입력하세요 ex) 20240101")
                     await message.channel.send("📆조회할 날짜를 입력하세요 ex) 20240101")
@@ -167,7 +169,8 @@ async def on_message(message):
             dpt_dt = message.content
             await set_step("dpt_dt")
             print(f"📆출발 일자 입력 완료 {dpt_dt}")
-            await message.channel.send(f"📆출발 일자 입력 완료 {dpt_dt}")
+            await message.channel.send(f"📆출발 일자 입력 완료")
+            await message.channel.send(f"'{dpt_dt}'")
 
             print("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
             await message.channel.send("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
@@ -182,7 +185,8 @@ async def on_message(message):
                 dpt_tm = str(message.content)
 
                 print(f"⏰조회 시간 입력 완료 {dpt_tm}")
-                await message.channel.send(f"⏰조회 시간 입력 완료 {dpt_tm}")
+                await message.channel.send(f"⏰조회 시간 입력 완료")
+                await message.channel.send(f"'{dpt_tm}'")
                 await set_step("dpt_tm")
 
                 print("🚅조회할 열차 숫자를 입력하세요 ex) 1, 4, 8, 10..")
@@ -203,11 +207,12 @@ async def on_message(message):
             num_trains_to_check = int(message.content)
 
             print(f"🚅조회할 열차 수 입력 완료 {num_trains_to_check}")
-            await message.channel.send(f"🚅조회할 열차 수 입력 완료 {num_trains_to_check}")
-            await set_step("num_trains_to_check")
+            await message.channel.send(f"🚅조회할 열차 수 입력 완료")
+            await message.channel.send(f"'{num_trains_to_check}'")
 
             print("😙예약 대기 여부를 입력하세요 1: 예약 대기, 2: 예약 대기 안함")
             await message.channel.send("😙예약 대기 여부를 입력하세요 1: 예약 대기, 2: 예약 대기 안함")
+            await set_step("num_trains_to_check")
     elif len(message.content) < 2 and current_step == "num_trains_to_check":
         if not str(message.content).isnumeric():
             print("⚠️숫자만 입력해주세요 ex) 1 - 예약대기, 2 - 예약대기 안함")
@@ -221,8 +226,6 @@ async def on_message(message):
             await message.channel.send(f"😙예약 대기: {want_reserve}")
             await set_step("want_reserve")
         if check_input(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check):
-            await message.channel.send("======SRT 예약을 시작합니다======")
-            await message.channel.send("🚅🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃🚃")
             pid = os.fork()
 
             if pid == 0:

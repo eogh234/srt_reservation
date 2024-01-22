@@ -225,14 +225,20 @@ class SRT:
                 self.driver.back()
 
     def refresh_result(self):
+        isSent = False
         submit = self.driver.find_element(By.XPATH, "//input[@value='조회하기']")
         self.driver.execute_script("arguments[0].click();", submit)
         self.cnt_refresh += 1
         print(f"새로고침 {self.cnt_refresh}회")
-        if self.cnt_refresh % 100 == 0:
+        if self.cnt_refresh <= 10 and not isSent:
             self.send_message(f"새로고침 {self.cnt_refresh}회")
-        if self.cnt_refresh % 1000 == 0:
+        if self.cnt_refresh == 11 and not isSent:
+            self.send_message("100회마다 알려드립니다💤")
+        if self.cnt_refresh % 100 == 0 and not isSent:
+            self.send_message(f"새로고침 {self.cnt_refresh}회")
+        if self.cnt_refresh % 1000 == 0 and not isSent:
             self.send_message("안돼에~😭")
+        isSent = True
         self.driver.implicitly_wait(10)
         time.sleep(0.5)
 
