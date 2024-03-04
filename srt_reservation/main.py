@@ -12,7 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException, NoSuchElementException, UnexpectedAlertPresentException, TimeoutException
+from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException, NoSuchElementException, UnexpectedAlertPresentException, TimeoutException, NoAlertPresentException
 
 from exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
 from validation import station_list
@@ -87,6 +87,7 @@ class SRT:
     def check_login(self):
         menu_text = self.driver.find_element(By.CSS_SELECTOR, "#wrap > div.header.header-e > div.global.clear > div").text
         if "환영합니다" in menu_text:
+            self.send_message("로그인 완료")
             return True
         else:
             return False
@@ -119,6 +120,8 @@ class SRT:
         print("기차를 조회합니다")
         print(f"출발역:{self.dpt_stn} , 도착역:{self.arr_stn}\n날짜:{self.dpt_dt}, 시간: {self.dpt_tm}시 이후\n{self.num_trains_to_check}개의 기차 중 예약")
         print(f"예약 대기 사용: {self.want_reserve}")
+        # self.send_message("====SRT 조회 시작====")
+        # self.send_message("🚅🚃🚃🚃🚃🚃🚃🚃")
 
         self.driver.find_element(By.XPATH, "//input[@value='조회하기']").click()
         self.driver.implicitly_wait(5)
@@ -128,28 +131,26 @@ class SRT:
         # standard_seat는 일반석 검색 결과 텍스트
         
         if "예약하기" in standard_seat:
-            info_a = self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(3)").text.replace("\n", " ")
-            info_b = self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(4)").text.replace("\n", " ")
-            info_c = self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(5)").text.replace("\n", " ")
-            print(info_a)
-            print(info_b)
-            print(info_c)
-            self.send_message(info_a)
-            self.send_message(info_b)
-            self.send_message(info_c)
-            print("예약 가능 클릭🫵")
-            self.send_message("예약 가능 클릭🫵")
-            try:
-                WebDriverWait(self.driver, 3).until(EC.alert_is_present(), "Check Alert Popup..")
-                self.driver.switch_to.alert.accept()
-            except TimeoutException as err:
-                print(err)
-                print("팝업이 발생하지 않았습니다.")
-                self.send_message("팝업이 발생하지 않았습니다.")
-            # Error handling in case that click does not work
+            # info_a = self.driver.find_element(By.CSS_SELECTOR,
+            #                              f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(3)").text.replace("\n", " ")
+            # info_b = self.driver.find_element(By.CSS_SELECTOR,
+            #                              f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(4)").text.replace("\n", " ")
+            # info_c = self.driver.find_element(By.CSS_SELECTOR,
+            #                              f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(5)").text.replace("\n", " ")
+            # print(info_a)
+            # print(info_b)
+            # print(info_c)
+            # self.send_message(info_a)
+            # self.send_message(info_b)
+            # self.send_message(info_c)
+            # try:
+            #     WebDriverWait(self.driver, 3).until(EC.alert_is_present(), "Check Alert Popup..")
+            #     self.driver.switch_to.alert.accept()
+            # except TimeoutException as err:
+            #     print(err)
+            #     print("팝업이 발생하지 않았습니다.")
+            #     self.send_message("팝업이 발생하지 않았습니다.")
+            # # Error handling in case that click does not work
             try:
                 self.driver.find_element(By.CSS_SELECTOR,
                                          f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").click()
@@ -180,21 +181,25 @@ class SRT:
                     print(err)
                     self.driver.back()
             finally:
-                self.driver.implicitly_wait(3)
+                self.driver.implicitly_wait(2)
 
-            try:
-                WebDriverWait(self.driver, 3).until(EC.alert_is_present(), "Check Alert Popup..")
-                self.driver.switch_to.alert.accept()
-            except TimeoutException as err:
-                print(err)
-                print("팝업이 발생하지 않았습니다.")
-                self.send_message("팝업이 발생하지 않았습니다.")
+            # try:
+            #     WebDriverWait(self.driver, 1).until(EC.alert_is_present(), "Check Alert Popup..")
+            #     self.driver.switch_to.alert.accept()
+            # except TimeoutException as err:
+            #     print(err)
+            #     print("팝업이 발생하지 않았습니다.")
+            #     self.send_message("팝업이 발생하지 않았습니다.")
             # 예약이 성공하면
+            print("예약 가능 클릭🫵")
+            self.send_message("예약 가능 클릭🫵")
             try:
                 if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
                     self.is_booked = True
                     print("예약 성공🎉")
                     self.send_message("예약 성공🎉")
+                    self.printInfo()
+
                     return self.driver
                 else:
                     print("잔여석 없음. 다시 검색")
@@ -206,10 +211,8 @@ class SRT:
                 self.send_message("팝업 발생 에러!")
                 try:
                     self.driver.switch_to.alert.accept()
-                    self.driver.switch_to.alert.send_keys(Keys.ENTER)
-                except Exception as error:
+                except NoAlertPresentException as error:
                     print(error)
-                    self.driver.switch_to.alert.send_keys(Keys.ENTER)
 
                 try:
                     self.driver.implicitly_wait(5)
@@ -230,9 +233,9 @@ class SRT:
         self.driver.execute_script("arguments[0].click();", submit)
         self.cnt_refresh += 1
         print(f"새로고침 {self.cnt_refresh}회")
-        if self.cnt_refresh <= 10 and not isSent:
+        if self.cnt_refresh <= 5 and not isSent:
             self.send_message(f"새로고침 {self.cnt_refresh}회")
-        if self.cnt_refresh == 11 and not isSent:
+        if self.cnt_refresh == 8 and not isSent:
             self.send_message("100회마다 알려드립니다💤")
         if self.cnt_refresh % 100 == 0 and not isSent:
             self.send_message(f"새로고침 {self.cnt_refresh}회")
@@ -244,14 +247,21 @@ class SRT:
 
     def reserve_ticket(self, reservation, i):
         if "신청하기" in reservation:
-            print("예약 대기 완료🎉")
-            self.send_message("예약 대기 완료🎉")
-            self.driver.find_element(By.CSS_SELECTOR,
-                                     f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
-            self.is_booked = True
-            return self.is_booked
+            try:
+                self.driver.find_element(By.CSS_SELECTOR,
+                                        f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                print("예약 대기 완료🎉")
+                self.send_message("예약 대기 완료🎉")
+                self.is_booked = True
+
+                self.printInfo()
+                return self.is_booked
+            except Exception as e:
+                print(e)
+                self.send_message("⚠️에러발생..예약하기를 다시 입력해주세요")
 
     def check_result(self):
+        retry_count = 0
         while True:
             for i in range(1, self.num_trains_to_check+1):
                 try:
@@ -261,18 +271,22 @@ class SRT:
                     standard_seat = "매진"
                     reservation = "매진"
                 except NoSuchElementException:
-                    time.sleep(1)
                     print("No Such Element")
-                    self.send_message("⚠️에러발생..예약하기를 다시 입력해주세요")
-                    break
+                    self.send_message(f"⚠️에러발생..재시도합니다. ({retry_count + 1}회)")
+                    self.driver.implicitly_wait(1)
+                    if retry_count > 5:
+                        retry_count = 0
+                        self.send_message(f"⚠️승차권 확인해주세요. 프로그램 종료합니다.")
+                        break
+                    else:
+                        retry_count += 1
                 except UnexpectedAlertPresentException as err:
                     print(err)
                     self.send_message("⚠️팝업 발생 에러")
                     try:
                         self.driver.switch_to.alert.accept()
-                    except Exception as error:
+                    except NoAlertPresentException as error:
                         print(error)
-                        self.switch_to.alert.send_keys(Keys.ENTER)
                     try:
                         self.driver.implicitly_wait(5)
                         self.driver.find_element(By.ID, 'srchDvNm01').send_keys(str(self.login_id))
@@ -280,6 +294,9 @@ class SRT:
                         self.driver.find_element(By.XPATH, '//*[@id="login-form"]/fieldset/div[1]/div[1]/div[2]/div/div[2]/input').click()
                         self.driver.implicitly_wait(5)
                     except NoSuchElementException as err:
+                        print(err)
+                        self.driver.back()
+                except WebDriverException as err:
                         print(err)
                         self.driver.back()
                 if self.book_ticket(standard_seat, i):
@@ -313,14 +330,14 @@ class SRT:
         print(f"🚅체크할 열차 수: {self.num_trains_to_check}")
         print(f"😙예약 대기 여부: {self.want_reserve}")
 
-        self.send_message("====INFO====")
-        self.send_message(f"🚉출발역: {self.dpt_stn}")
-        self.send_message(f"🚉도착역: {self.arr_stn}")
-        self.send_message(f"📆출발 일자: {self.dpt_dt}")
-        self.send_message(f"⏰출발 시간: {self.dpt_tm}")
+        # self.send_message("====INFO====")
+        self.send_message(f"\n====INFO====\n🚉출발역: {self.dpt_stn}\n🚉도착역: {self.arr_stn}\n📆출발 일자: {self.dpt_dt}\n⏰출발 시간: {self.dpt_tm}\n🚅체크할 열차 수: {self.num_trains_to_check}\n😙예약 대기 여부: {self.want_reserve}\n")
+        # self.send_message(f"🚉도착역: {self.arr_stn}")
+        # self.send_message(f"📆출발 일자: {self.dpt_dt}")
+        # self.send_message(f"⏰출발 시간: {self.dpt_tm}")
 
-        self.send_message(f"🚅체크할 열차 수: {self.num_trains_to_check}")
-        self.send_message(f"😙예약 대기 여부: {self.want_reserve}")
+        # self.send_message(f"🚅체크할 열차 수: {self.num_trains_to_check}")
+        # self.send_message(f"😙예약 대기 여부: {self.want_reserve}")
 
 #
 # if __name__ == "__main__":

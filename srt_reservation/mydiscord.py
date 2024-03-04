@@ -128,8 +128,8 @@ async def on_message(message):
         print("현재 가능한 역👇")
         print(f"{station_list}")
         await message.channel.send("🚉출발역을 입력하세요")
-        await message.channel.send("현재 가능한 역👇")
-        await message.channel.send(f"{station_list}")
+        # await message.channel.send("현재 가능한 역👇")
+        # await message.channel.send(f"{station_list}")
         await set_step("init")
     elif (current_step == "init" or current_step == "dpt_stn") and (message.content in station_list):
         if current_step == "init":
@@ -144,8 +144,8 @@ async def on_message(message):
                     print("현재 가능한 역👇")
                     print(f"{station_list}")
                     await message.channel.send("🚉도착역을 입력하세요")
-                    await message.channel.send("현재 가능한 역👇")
-                    await message.channel.send(f"{station_list}")
+                    # await message.channel.send("현재 가능한 역👇")
+                    # await message.channel.send(f"{station_list}")
                     await set_step("dpt_stn")
                     break
         elif current_step == "dpt_stn":
@@ -223,7 +223,6 @@ async def on_message(message):
             else:
                 want_reserve = 1
             print(f"😙예약 대기: {want_reserve}")
-            await message.channel.send(f"😙예약 대기: {want_reserve}")
             await set_step("want_reserve")
         if check_input(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check):
             pid = os.fork()
