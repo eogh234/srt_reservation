@@ -17,8 +17,7 @@ from selenium.common.exceptions import ElementClickInterceptedException, StaleEl
 from exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
 from validation import station_list
 
-
-class SRT:
+class KTX:
     def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False, webhook_url=""):
         """
         :param dpt_stn: SRT 출발역
@@ -50,18 +49,15 @@ class SRT:
     def send_message(self, msg):
         """디스코드 메세지 전송"""
         now = datetime.now()
-        message = {
-            "content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
+        message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
         requests.post(self.webhook_url, data=message)
         print(message)
 
     def check_input(self):
         if self.dpt_stn not in station_list:
-            raise InvalidStationNameError(
-                f"⚠️출발역 오류. '{self.dpt_stn}' 은/는 목록에 없습니다.")
+            raise InvalidStationNameError(f"⚠️출발역 오류. '{self.dpt_stn}' 은/는 목록에 없습니다.")
         if self.arr_stn not in station_list:
-            raise InvalidStationNameError(
-                f"⚠️도착역 오류. '{self.arr_stn}' 은/는 목록에 없습니다.")
+            raise InvalidStationNameError(f"⚠️도착역 오류. '{self.arr_stn}' 은/는 목록에 없습니다.")
         if not str(self.dpt_dt).isnumeric():
             raise InvalidDateFormatError("⚠️날짜는 숫자로만 이루어져야 합니다.")
         try:
@@ -77,69 +73,66 @@ class SRT:
         try:
             chrome_options = Options()
             chrome_options.add_argument("--disable-cache")
-            self.driver = webdriver.Chrome(
-                options=chrome_options, service=Service(ChromeDriverManager().install()))
+            self.driver = webdriver.Chrome(options=chrome_options, service=Service(ChromeDriverManager().install()))
             self.driver.delete_all_cookies()
         except WebDriverException:
-            self.driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()))
+            print("WebDriverException invoked!")
+            self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
     def login(self):
-        self.driver.get('https://etk.srail.co.kr/cmc/01/selectLoginForm.do')
-        self.driver.implicitly_wait(15)
-        self.driver.find_element(
-            By.ID, 'srchDvNm01').send_keys(str(self.login_id))
-        self.driver.find_element(
-            By.ID, 'hmpgPwdCphd01').send_keys(str(self.login_psw))
-        self.driver.find_element(
-            By.XPATH, '//*[@id="login-form"]/fieldset/div[1]/div[2]/div[2]/div/div[2]/input').click()
-        self.driver.implicitly_wait(5)
+        """Log in to the Korail website."""
+        for i in range(10):
+            try:
+                self.driver.get('https://www.letskorail.com/korail/com/login.do')
+                self.driver.implicitly_wait(15)
+                self.driver.find_element(By.ID, 'txtMember').send_keys(str(self.login_id))
+                self.driver.find_element(By.ID, 'txtPwd').send_keys(str(self.login_psw))
+                self.driver.find_element(By.XPATH, '/html/body/div[1]/div[3]/div/div[1]/div[2]/div[1]/div[1]/form[1]/fieldset/div[1]/ul/li[3]/a/img').click()
+                self.driver.implicitly_wait(5)
+                break
+            except Exception as e:
+                self.send_message(f"[에러발생] 로그인 재시도..{i+1}회")
+                self.driver.implicitly_wait(5)
+                time.sleep(5)
         return self.driver
-
-    def check_login(self):
-        menu_text = self.driver.find_element(
-            By.CSS_SELECTOR, "#wrap > div.header.header-e > div.global.clear > div").text
-        if "환영합니다" in menu_text:
-            self.send_message("로그인 완료")
-            return True
-        else:
-            return False
 
     def go_search(self):
         # 기차 조회 페이지로 이동
-        self.driver.get(
-            'https://etk.srail.kr/hpg/hra/01/selectScheduleList.do')
+        self.driver.get('https://www.letskorail.com/ebizprd/EbizPrdTicketpr21100W_pr21110.do')
         self.driver.implicitly_wait(5)
 
         # 출발지 입력
-        elm_dpt_stn = self.driver.find_element(By.ID, 'dptRsStnCdNm')
+        elm_dpt_stn = self.driver.find_element(By.ID, 'start')
         elm_dpt_stn.clear()
         elm_dpt_stn.send_keys(self.dpt_stn)
 
         # 도착지 입력
-        elm_arr_stn = self.driver.find_element(By.ID, 'arvRsStnCdNm')
+        elm_arr_stn = self.driver.find_element(By.ID, 'get')
         elm_arr_stn.clear()
         elm_arr_stn.send_keys(self.arr_stn)
 
+        t_date = str(self.dpt_dt)
+        year = t_date[:4]
+        month = t_date[4:6]
+        day = t_date[6:]
+
         # 출발 날짜 입력
-        elm_dpt_dt = self.driver.find_element(By.ID, "dptDt")
-        self.driver.execute_script(
-            "arguments[0].setAttribute('style','display: True;')", elm_dpt_dt)
-        Select(self.driver.find_element(By.ID, "dptDt")
-               ).select_by_value(self.dpt_dt)
+        elm_dpt_year = self.driver.find_element(By.ID, "s_year")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_dpt_year)
+        Select(self.driver.find_element(By.ID, "s_year")).select_by_value(year)
+
+        elm_dpt_month = self.driver.find_element(By.ID, "s_month")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_dpt_month)
+        Select(self.driver.find_element(By.ID, "s_month")).select_by_value(month)
+
+        elm_dpt_day = self.driver.find_element(By.ID, "s_day")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_dpt_day)
+        Select(self.driver.find_element(By.ID, "s_day")).select_by_value(day)
 
         # 출발 시간 입력
-        elm_dpt_tm = self.driver.find_element(By.ID, "dptTm")
-        self.driver.execute_script(
-            "arguments[0].setAttribute('style','display: True;')", elm_dpt_tm)
-        Select(self.driver.find_element(By.ID, "dptTm")
-               ).select_by_visible_text(self.dpt_tm)
-
-        # elm_per_cnt = self.driver.find_element(By.ID, "psgInfoPerPrnb1")
-        # self.driver.execute_script(
-        #     "arguments[0].setAttribute('style','display: True;')", elm_per_cnt)
-        # Select(self.driver.find_element(By.ID, "psgInfoPerPrnb1")
-        #        ).select_by_value("2")
+        elm_dpt_tm = self.driver.find_element(By.ID, "s_hour")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_dpt_tm)
+        Select(self.driver.find_element(By.ID, "s_hour")).select_by_value(self.dpt_tm)
 
         print("기차를 조회합니다")
         print(f"출발역:{self.dpt_stn} , 도착역:{self.arr_stn}\n날짜:{self.dpt_dt}, 시간: {self.dpt_tm}시 이후\n{self.num_trains_to_check}개의 기차 중 예약")
@@ -147,14 +140,14 @@ class SRT:
         # self.send_message("====SRT 조회 시작====")
         # self.send_message("🚅🚃🚃🚃🚃🚃🚃🚃")
 
-        self.driver.find_element(By.XPATH, "//input[@value='조회하기']").click()
-        self.driver.implicitly_wait(20)
+        self.driver.find_element(By.XPATH, "//img[@alt='조회하기']").click()
+        self.driver.implicitly_wait(30)
         time.sleep(1)
 
     def book_ticket(self, standard_seat, i):
         # standard_seat는 일반석 검색 결과 텍스트
-
-        if "예약하기" in standard_seat:
+        
+        if "매진" not in standard_seat:
             # info_a = self.driver.find_element(By.CSS_SELECTOR,
             #                              f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(3)").text.replace("\n", " ")
             # info_b = self.driver.find_element(By.CSS_SELECTOR,
@@ -177,11 +170,11 @@ class SRT:
             # # Error handling in case that click does not work
             try:
                 self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").click()
+                                         f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(6) > a:nth-child(1) > img").click()
             except ElementClickInterceptedException as err:
                 print(err)
                 self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").send_keys(
+                                         f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(6) > a:nth-child(1) > img").send_keys(
                     Keys.ENTER)
             except NoSuchElementException as err:
                 print(err)
@@ -194,19 +187,6 @@ class SRT:
                 except Exception as error:
                     print(error)
                     self.driver.switch_to.alert.send_keys(Keys.ENTER)
-
-                try:
-                    self.driver.implicitly_wait(5)
-                    self.driver.find_element(
-                        By.ID, 'srchDvNm01').send_keys(str(self.login_id))
-                    self.driver.find_element(
-                        By.ID, 'hmpgPwdCphd01').send_keys(str(self.login_psw))
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="login-form"]/fieldset/div[1]/div[1]/div[2]/div/div[2]/input').click()
-                    self.driver.implicitly_wait(5)
-                except NoSuchElementException as err:
-                    print(err)
-                    self.driver.back()
             finally:
                 self.driver.implicitly_wait(2)
 
@@ -231,7 +211,6 @@ class SRT:
                 else:
                     print("잔여석 없음. 다시 검색")
                     self.send_message("잔여석 없음. 다시 검색")
-                    self.driver.back()  # 뒤로가기
                     self.driver.implicitly_wait(5)
             except UnexpectedAlertPresentException as err:
                 print(err)
@@ -240,26 +219,13 @@ class SRT:
                     self.driver.switch_to.alert.accept()
                 except NoAlertPresentException as error:
                     print(error)
-
-                try:
-                    self.driver.implicitly_wait(5)
-                    self.driver.find_element(
-                        By.ID, 'srchDvNm01').send_keys(str(self.login_id))
-                    self.driver.find_element(
-                        By.ID, 'hmpgPwdCphd01').send_keys(str(self.login_psw))
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="login-form"]/fieldset/div[1]/div[1]/div[2]/div/div[2]/input').click()
-                    self.driver.implicitly_wait(5)
-                except NoSuchElementException as err:
-                    print(err)
-                    self.driver.back()
             except NoSuchElementException as err:
                 print(err)
                 self.driver.back()
 
     def refresh_result(self):
         isSent = False
-        submit = self.driver.find_element(By.XPATH, "//input[@value='조회하기']")
+        submit = self.driver.find_element(By.XPATH, "/html/body/div[1]/div[3]/div/div[1]/form[1]/div/div[3]/p/a/img")
         self.driver.execute_script("arguments[0].click();", submit)
         self.cnt_refresh += 1
         print(f"새로고침 {self.cnt_refresh}회")
@@ -279,7 +245,7 @@ class SRT:
         if "신청하기" in reservation:
             try:
                 self.driver.find_element(By.CSS_SELECTOR,
-                                         f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                                        f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(10) > a > img").click()
                 print("예약 대기 완료🎉")
                 self.send_message("예약 대기 완료🎉")
                 self.is_booked = True
@@ -293,52 +259,54 @@ class SRT:
     def check_result(self):
         retry_count = 0
         while True:
-            # for i in range(1, self.num_trains_to_check+1):
-            try:
-                standard_seat = self.driver.find_element(
-                    By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({self.num_trains_to_check}) > td:nth-child(7)").text
-                reservation = self.driver.find_element(
-                    By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({self.num_trains_to_check}) > td:nth-child(8)").text
-            except StaleElementReferenceException:
-                standard_seat = "매진"
-                reservation = "매진"
-            except NoSuchElementException:
-                print("No Such Element")
-                self.send_message(f"⚠️에러발생..재시도합니다. ({retry_count + 1}회)")
-                self.driver.implicitly_wait(1)
-                if retry_count > 5:
-                    retry_count = 0
-                    self.send_message(f"⚠️승차권 확인해주세요. 프로그램 종료합니다.")
-                    break
-                else:
-                    retry_count += 1
-            except UnexpectedAlertPresentException as err:
-                print(err)
-                self.send_message("⚠️팝업 발생 에러")
+            # try:
+            #     self.driver.implicitly_wait(1)
+            #     self.driver.find_element(By.CLASS_NAME, 'swal2-confirm').click()
+            # except NoSuchElementException as err:
+            #     print(err)
+            #     self.driver.back()
+            for i in range(1, 1 + self.num_trains_to_check * 2, 2):
+                print(f"i = {i}")
                 try:
-                    self.driver.switch_to.alert.accept()
-                except NoAlertPresentException as error:
-                    print(error)
-                try:
-                    self.driver.implicitly_wait(5)
-                    self.driver.find_element(
-                        By.ID, 'srchDvNm01').send_keys(str(self.login_id))
-                    self.driver.find_element(
-                        By.ID, 'hmpgPwdCphd01').send_keys(str(self.login_psw))
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="login-form"]/fieldset/div[1]/div[1]/div[2]/div/div[2]/input').click()
-                    self.driver.implicitly_wait(5)
-                except NoSuchElementException as err:
-                    print(err)
+                    # 일반석 예약하기
+                    standard_seat = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(6) > a:nth-child(1) > img")
+                    if not standard_seat:
+                        standard_seat = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(6) > img")
+                    standard_seat = standard_seat[0].get_attribute('alt')
+                    # 예약대기
+                    reservation = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(10) > a > img")
+                    if not reservation:
+                        reservation = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(10) > img")
+                    reservation = reservation[0].get_attribute('alt')
+                    print(f"STD: {standard_seat} RESERVE: {reservation}")
+                except StaleElementReferenceException:
+                    standard_seat = "좌석매진"
+                    reservation = "좌석매진"
+                except NoSuchElementException:
+                    for _ in range(5):
+                        standard_seat = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(6) > a:nth-child(1) > img")
+                        if standard_seat:
+                            standard_seat = standard_seat[0].get_attribute('alt')
+                        reservation = self.driver.find_elements("css selector", f"#tableResult > tbody > tr:nth-child({i}) > td:nth-child(10) > a > img")
+                        if reservation:
+                            reservation = reservation[0].get_attribute('alt')
+                    print("No Such Element")
                     self.driver.back()
-            except WebDriverException as err:
-                print(err)
-                self.driver.back()
-            if self.book_ticket(standard_seat, self.num_trains_to_check):
-                return self.driver
+                except UnexpectedAlertPresentException as err:
+                    print(err)
+                    self.send_message("⚠️팝업 발생 에러")
+                    try:
+                        self.driver.switch_to.alert.accept()
+                    except NoAlertPresentException as error:
+                        print(error)
+                except WebDriverException as err:
+                        print(err)
+                        self.driver.back()
+                if self.book_ticket(standard_seat, i):
+                    return self.driver
 
-            if self.want_reserve:
-                self.reserve_ticket(reservation, self.num_trains_to_check)
+                if self.want_reserve:
+                    self.reserve_ticket(reservation, i)
 
             if self.is_booked:
                 return self.driver
@@ -364,21 +332,5 @@ class SRT:
 
         print(f"🚅체크할 열차 수: {self.num_trains_to_check}")
         print(f"😙예약 대기 여부: {self.want_reserve}")
-
-        # self.send_message("====INFO====")
-        self.send_message(
-            f"\n====INFO====\n🚉출발역: {self.dpt_stn}\n🚉도착역: {self.arr_stn}\n📆출발 일자: {self.dpt_dt}\n⏰출발 시간: {self.dpt_tm}\n🚅체크할 열차 수: {self.num_trains_to_check}\n😙예약 대기 여부: {self.want_reserve}\n")
-        # self.send_message(f"🚉도착역: {self.arr_stn}")
-        # self.send_message(f"📆출발 일자: {self.dpt_dt}")
-        # self.send_message(f"⏰출발 시간: {self.dpt_tm}")
-
-        # self.send_message(f"🚅체크할 열차 수: {self.num_trains_to_check}")
-        # self.send_message(f"😙예약 대기 여부: {self.want_reserve}")
-
-#
-# if __name__ == "__main__":
-#     srt_id = os.environ.get('srt_id')
-#     srt_psw = os.environ.get('srt_psw')
-#
-#     srt = SRT("동탄", "동대구", "20220917", "08")
-#     srt.run(srt_id, srt_psw)
+        
+        self.send_message(f"\n====INFO====\n🚉출발역: {self.dpt_stn}\n🚉도착역: {self.arr_stn}\n📆출발 일자: {self.dpt_dt}\n⏰출발 시간: {self.dpt_tm}\n🚅체크할 열차 수: {self.num_trains_to_check}\n😙예약 대기 여부: {self.want_reserve}\n")

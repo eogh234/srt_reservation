@@ -5,6 +5,7 @@ import discord
 import yaml
 
 from main import SRT
+from ktx import KTX
 
 from exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
 from validation import station_list
@@ -41,14 +42,22 @@ with open('/Users/Daeho/Projects/srt_reservation/srt_reservation/config.yaml', e
 
     hj_author = _cfg['HJ']['AUTHOR']
     dh_author = _cfg['DH']['AUTHOR']
+    # SRT
     hj_login_id = _cfg['HJ']['LOGIN_ID']
     dh_login_id = _cfg['DH']['LOGIN_ID']
     hj_login_psw = _cfg['HJ']['LOGIN_PASSWORD']
     dh_login_psw = _cfg['DH']['LOGIN_PASSWORD']
+    #KTX
+    ktx_hj_login_id = _cfg['HJ']['KTX_LOGIN_ID']
+    ktx_dh_login_id = _cfg['DH']['KTX_LOGIN_ID']
+    ktx_hj_login_psw = _cfg['HJ']['KTX_LOGIN_PASSWORD']
+    ktx_dh_login_psw = _cfg['DH']['KTX_LOGIN_PASSWORD']
+    
     hj_username = _cfg['HJ']['USERNAME']
     dh_username = _cfg['DH']['USERNAME']
 
     webhook_url = _cfg['DISCORD_WEBHOOK_URL']
+    ktx_webhook_url = _cfg['KTX_DISCORD_WEBHOOK_URL']
     token = _cfg['DISCORD_TOKEN']
 
     intents = discord.Intents.default()
@@ -64,12 +73,21 @@ current_step = "wait"
 
 
 def send_message(msg):
+<<<<<<< HEAD
     """디스코드 메세지 전송"""
     now = datetime.now()
     message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
     requests.post(webhook_url, data=message)
     print(message)
 
+=======
+        """디스코드 메세지 전송"""
+        now = datetime.now()
+        message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
+        requests.post(webhook_url, data=message)
+        requests.post(ktx_webhook_url, data=message)
+        print(message)
+>>>>>>> 54a75637ee96a30ef71c542782c4a161008c9fbd
 
 async def set_step(step):
     global current_step
@@ -107,6 +125,11 @@ async def on_message(message):
     global hj_login_psw
     global dh_login_psw
 
+    global ktx_hj_login_id
+    global ktx_dh_login_id
+    global ktx_hj_login_psw
+    global ktx_dh_login_psw
+
     global dpt_stn
     global arr_stn
     global dpt_dt
@@ -120,22 +143,32 @@ async def on_message(message):
         await set_step("wait")
 
     if message.content == "예약하기" and current_step == "wait":
-        if str(message.author) == hj_author:
-            login_id = hj_login_id
-            login_psw = hj_login_psw
-            print(f"Hello {hj_username}")
-            await message.channel.send(f"Hello {hj_username}")
+        if message.channel.id == srt_channel:
+            print("This is SRT Channel")
+            if str(message.author) == hj_author:
+                login_id = hj_login_id
+                login_psw = hj_login_psw
+                print(f"Hello {hj_username}")
+                await message.channel.send(f"Hello {hj_username}")
+            else:
+                login_id = dh_login_id
+                login_psw = dh_login_psw
+                print(f"Hello {dh_username}")
+                await message.channel.send(f"Hello {dh_username}")
         else:
-            login_id = dh_login_id
-            login_psw = dh_login_psw
-            print(f"Hello {dh_username}")
-            await message.channel.send(f"Hello {dh_username}")
+            print("This is KTX Channel")
+            if str(message.author) == hj_author:
+                login_id = ktx_hj_login_id
+                login_psw = ktx_hj_login_psw
+                print(f"Hello {hj_username}")
+                await message.channel.send(f"Hello {hj_username}")
+            else:
+                login_id = ktx_dh_login_id
+                login_psw = ktx_dh_login_psw
+                print(f"Hello {dh_username}")
+                await message.channel.send(f"Hello {dh_username}")
         print("🚉출발역을 입력하세요")
-        print("현재 가능한 역👇")
-        print(f"{station_list}")
         await message.channel.send("🚉출발역을 입력하세요")
-        # await message.channel.send("현재 가능한 역👇")
-        # await message.channel.send(f"{station_list}")
         await set_step("init")
     elif (current_step == "init" or current_step == "dpt_stn") and (message.content in station_list):
         if current_step == "init":
@@ -178,8 +211,12 @@ async def on_message(message):
             await message.channel.send(f"📆출발 일자 입력 완료")
             await message.channel.send(f"'{dpt_dt}'")
 
-            print("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
-            await message.channel.send("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
+            if message.channel.id == srt_channel:
+                print("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
+                await message.channel.send("⏰조회할 시간을 입력하세요 (짝수 시간만) ex) 08, 18, 22..")
+            else:
+                print("⏰조회할 시간을 입력하세요")
+                await message.channel.send("⏰조회할 시간을 입력하세요")
         except ValueError:
             raise InvalidDateError("⚠️날짜가 잘못 되었습니다. YYYYMMDD 형식으로 입력해주세요.")
             return False
@@ -187,7 +224,23 @@ async def on_message(message):
     elif len(message.content) == 2 and current_step == "dpt_dt":
         try:
             print(f"시간 숫자 여부: {str(message.content).isnumeric()}")
-            if int(message.content) % 2 == 0:
+            #SRT
+            if message.channel.id == srt_channel:
+                if int(message.content) % 2 == 0:
+                    dpt_tm = str(message.content)
+
+                    print(f"⏰조회 시간 입력 완료 {dpt_tm}")
+                    await message.channel.send(f"⏰조회 시간 입력 완료")
+                    await message.channel.send(f"'{dpt_tm}'")
+                    await set_step("dpt_tm")
+
+                    print("🚅조회할 열차 숫자를 입력하세요 ex) 1, 4, 8, 10..")
+                    await message.channel.send("🚅조회할 열차 숫자를 입력하세요 ex) 1, 4, 8, 10..")
+                else:
+                    print("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
+                    await message.channel.send("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
+            #KTX
+            else:
                 dpt_tm = str(message.content)
 
                 print(f"⏰조회 시간 입력 완료 {dpt_tm}")
@@ -197,10 +250,6 @@ async def on_message(message):
 
                 print("🚅조회할 열차 숫자를 입력하세요 ex) 1, 4, 8, 10..")
                 await message.channel.send("🚅조회할 열차 숫자를 입력하세요 ex) 1, 4, 8, 10..")
-            else:
-                print("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
-                await message.channel.send("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
-
         except ValueError:
             raise InvalidTimeFormatError(
                 "⚠️시간이 잘못 되었습니다. 짝수 시간으로 입력해주세요. 00, 07, 17, 23")
@@ -236,9 +285,18 @@ async def on_message(message):
 
             if pid == 0:
                 print(f"Child Process: {os.getpid()}")
+<<<<<<< HEAD
                 srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm,
                           num_trains_to_check, want_reserve, webhook_url=webhook_url)
                 srt.run(login_id, login_psw)
+=======
+                if message.channel.id == srt_channel:
+                    srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve, webhook_url=webhook_url)
+                    srt.run(login_id, login_psw)
+                else:
+                    ktx = KTX(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve, webhook_url=ktx_webhook_url)
+                    ktx.run(login_id, login_psw)
+>>>>>>> 54a75637ee96a30ef71c542782c4a161008c9fbd
             else:
                 print(f"Parrent Process: {os.getpid()}")
                 await set_step("wait")
