@@ -47,12 +47,12 @@ with open('/Users/Daeho/Projects/srt_reservation/srt_reservation/config.yaml', e
     dh_login_id = _cfg['DH']['LOGIN_ID']
     hj_login_psw = _cfg['HJ']['LOGIN_PASSWORD']
     dh_login_psw = _cfg['DH']['LOGIN_PASSWORD']
-    #KTX
+    # KTX
     ktx_hj_login_id = _cfg['HJ']['KTX_LOGIN_ID']
     ktx_dh_login_id = _cfg['DH']['KTX_LOGIN_ID']
     ktx_hj_login_psw = _cfg['HJ']['KTX_LOGIN_PASSWORD']
     ktx_dh_login_psw = _cfg['DH']['KTX_LOGIN_PASSWORD']
-    
+
     hj_username = _cfg['HJ']['USERNAME']
     dh_username = _cfg['DH']['USERNAME']
 
@@ -73,21 +73,12 @@ current_step = "wait"
 
 
 def send_message(msg):
-<<<<<<< HEAD
     """디스코드 메세지 전송"""
     now = datetime.now()
     message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
     requests.post(webhook_url, data=message)
     print(message)
 
-=======
-        """디스코드 메세지 전송"""
-        now = datetime.now()
-        message = {"content": f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {str(msg)}"}
-        requests.post(webhook_url, data=message)
-        requests.post(ktx_webhook_url, data=message)
-        print(message)
->>>>>>> 54a75637ee96a30ef71c542782c4a161008c9fbd
 
 async def set_step(step):
     global current_step
@@ -224,7 +215,7 @@ async def on_message(message):
     elif len(message.content) == 2 and current_step == "dpt_dt":
         try:
             print(f"시간 숫자 여부: {str(message.content).isnumeric()}")
-            #SRT
+            # SRT
             if message.channel.id == srt_channel:
                 if int(message.content) % 2 == 0:
                     dpt_tm = str(message.content)
@@ -239,7 +230,7 @@ async def on_message(message):
                 else:
                     print("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
                     await message.channel.send("⚠️짝수 시간만 입력해주세요 ex) 08, 18, 22..")
-            #KTX
+            # KTX
             else:
                 dpt_tm = str(message.content)
 
@@ -285,18 +276,9 @@ async def on_message(message):
 
             if pid == 0:
                 print(f"Child Process: {os.getpid()}")
-<<<<<<< HEAD
                 srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm,
                           num_trains_to_check, want_reserve, webhook_url=webhook_url)
                 srt.run(login_id, login_psw)
-=======
-                if message.channel.id == srt_channel:
-                    srt = SRT(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve, webhook_url=webhook_url)
-                    srt.run(login_id, login_psw)
-                else:
-                    ktx = KTX(dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check, want_reserve, webhook_url=ktx_webhook_url)
-                    ktx.run(login_id, login_psw)
->>>>>>> 54a75637ee96a30ef71c542782c4a161008c9fbd
             else:
                 print(f"Parrent Process: {os.getpid()}")
                 await set_step("wait")
